@@ -1,0 +1,471 @@
+---
+title: "HW 3"
+author: "Neal Kar (ink2105)"
+date: "02/14/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(readxl)
+library(knitr)
+```
+
+# Question 1 
+
+### a) 
+
+*Read in the SAT data. This data has information by state on the average verbal and math scores on the SAT for 2004 and 2005, and lists the participation percentage and region of each state. The SAT is an exam used for college applications, and higher scores imply better performance. Each section was scored from 200 to 800 in 2005.*
+
+*Clean the variable names to be easier to work with. Assume that "MathSAT_2005...5" refers to the math scores in 2005 and "MathSAT_2005...7" refers to the math scores in 2004.*
+
+```{r}
+
+sat_data <- read_excel("data/sat_data.xls")
+
+sat_data_cleaned <- sat_data %>%
+  rename(math_2004 = MathSAT_2005...7, math_2005 = MathSAT_2005...5, state = State, region = Region, part_pct = Participation_pct, verbal_2005 = VerbalSAT_2005, verbal_2004 = VerbalSAT_2004)
+
+```
+### b)
+
+*Once the data has been read in and cleaned, creating two new variables which calculate the total score for 2004 and 2005 for each state.* 
+
+```{r}
+
+sat_data_cleaned <- sat_data_cleaned %>%
+  mutate(sat_tot_2004 = verbal_2004 + math_2004, sat_tot_2005 = verbal_2005 + math_2005)
+
+```
+
+
+### c) 
+
+*Was there a relationship between verbal and math SAT scores in 2005? Create a graph to evaluate this question, and be sure to include appropriate labels. Comment on the results.* 
+
+```{r}
+
+ggplot(data = sat_data_cleaned) +
+  geom_point(aes(x=verbal_2005, y=math_2005)) +
+  labs(title= "2005 Verbal and Math Scores", x = "2005 Verbal SAT Score", y = "2005 Math SAT Score")
+
+```
+
+Yes, there appears to a relationship between verbal SAT score and math SAT score. Specifically, there seems to be a positive correlation between the scores since math SAT scores tended to increase as verbal SAT scores increased.
+
+### d) 
+
+*Calculate the average total score by region in 2004 and 2005. Which region had the lowest performance in 2004? Which had the best performance in 2004? What about 2005? You can refer to the regions using the abbreviations from the dataset. You can use `kable()` to print out and refer to your results.* 
+
+```{r}
+
+sat_score_avg <- sat_data_cleaned %>%
+  group_by(region) %>%
+  summarize(mean_2004 = mean(sat_tot_2004), mean_2005 = mean(sat_tot_2005))
+
+#Sort and print
+
+sat_score_avg <- arrange(sat_score_avg, desc(mean_2004))
+kable(sat_score_avg)
+
+sat_score_avg <- arrange(sat_score_avg, desc(mean_2005))
+kable(sat_score_avg)
+
+```
+
+The SA region had the worst performance in 2004. The WNC region had the best performance in 2004. The SA region had the worst performance in 2005. The WNC region had the best performance in 2005.  
+
+### e) 
+*Use the `case_when` function to create a new participation variable with three groups:*
+
+*- "low" for participation less than 50% *
+
+*-"medium" for participation between 50% and 75% *
+
+*- "high" for participation higher than 75% *
+
+```{r}
+
+sat_data_cleaned <- sat_data_cleaned %>%
+  mutate(part_cat = case_when(part_pct < 50 ~ "low", part_pct >= 50 & part_pct <= 75 ~ "medium", part_pct > 75 ~ "high"))
+
+
+```
+
+### f) 
+
+*Create a heatmap showing average performance in 2005 by region and your new participation variable. To do this, make a `ggplot` with `geom_tile`. The x aesthetic should be mapped to participation, the y aesthetic should be mapped to region, and the fill aesthetic should be mapped to performance. The geom_tile() geom will automatically calculate the average. * 
+
+
+```{r}
+
+sat_data_cleaned$part_cat <- factor(sat_data_cleaned$part_cat, levels= c("low", "medium", "high"))
+
+sat_data_cleaned[order(sat_data_cleaned$part_cat), ]
+
+ggplot(sat_data_cleaned) +
+  geom_tile(aes(x=part_cat, y=region, fill=sat_tot_2005)) +
+  labs(title="2005 SAT Scores by Region and Participation", x="Participation", y="Region", fill="2005 SAT Score") +
+  theme(plot.background = element_rect(fill=NULL), axis.title = element_text(size = 14))
+
+```
+
+### g)
+
+*Improve the visualization of your heatmap by doing the following:*
+
+*(1) Ensure that the plot has an appropriate title and that both axes and the legend are properly labeled.* 
+*(2) Make sure the participation groups are presented in a logical order.*
+*(3) Use a `theme()` statement to remove the grey panel background.*
+*(4) Use a `theme()` statement to increase the axis text size to 14.*
+
+### h) 
+
+*Use your heatmap to answer the following questions:*
+
+*(1) Does participation appear to be a good predictor for performance?* 
+
+Participation does appear to be a good predictor of performance. 
+
+*(2) If so, in what direction is the relationship?*
+
+The direction seems to be negative, meaning higher participation seems to be associated with lower scores.
+
+*(3) Does performance appear to change substantially region to region?*
+
+Yes, performance appears to change substantially region to region.
+
+
+# Question 2
+
+*You have received a dataset of treatment compliance for a 10-week study on physical activity and cognitive functioning. This data set can be found in the `activity_compliance.csv` file.* 
+
+### a)
+
+*Load the compliance data in from the `activity_compliance.csv` file.*
+
+```{r }
+
+compliance <- read_csv("data/activity_compliance.csv")
+
+```
+
+### b)
+
+*The data set contains missing compliance observations. For the purpose of this exercise, we will treat missing data as non-compliant. Change all NA compliance values to 0 and use this updated dataset for the following problems.* 
+
+```{r}
+
+#compliance[is.na(compliance)] <- 0
+
+compliance_cleaned <- compliance
+
+compliance_cleaned$compliant[is.na(compliance_cleaned$compliant)] <- 0
+
+```
+
+### c)
+
+*Create a summary data frame of the proportion of compliant individuals per week and its 95% confidence interval. Report it using the `kable()` function.*
+
+```{r}
+
+summary_compliant <- compliance_cleaned %>% 
+  group_by(week, compliant) %>%
+  summarize(n = n()) %>%
+  mutate(proportion = n/sum(n)) %>%
+  filter(compliant == 1)
+
+#95% CI for proportion: p +/- Z(sqrt([p(1-p)] / n))
+#Z = 1.96
+
+#Lower bound
+summary_compliant <- summary_compliant %>%
+  mutate(lower_bound_95_CI = proportion - (1.96*(sqrt((proportion*(1-proportion)) / n))))
+
+summary_compliant <- summary_compliant %>%
+  mutate(upper_bound_95_CI = proportion + (1.96*(sqrt((proportion*(1-proportion)) / n))))
+
+kable(summary_compliant)
+
+```
+
+### d)
+
+*The code skeleton below will create a graph that shows the proportion of compliant individuals and it's 95% confidence interval per week once you plug in your data frame and the variables for x, y, ymax, and ymin. The ymax and ymin aesthetics should be mapped to the upper and lower bounds of your calculated 95% Confidence interval.*
+
+*Once you have plugged in these values, you should see a plot of proportions with error bars marking the 95% confidence intervals. We have also added additional statements to improve our plot. In a series of sentences, please describe what each statement does. You need to describe the 8 statements starting with `geom_pointrange` and ending with `annotate`. Hint: If you are stuck, try removing a statement and seeing what changes!*
+
+__When are done filling in the code, make sure to change the code chunk option below to eval = TRUE__
+
+
+```{r, eval = TRUE}
+
+
+ggplot(data = summary_compliant) +   # Fill in the summary data frame you create
+  geom_pointrange(aes(x = week, y = proportion, ymax = upper_bound_95_CI, ymin = lower_bound_95_CI)) +  # Fill in the x, y, ymax, and ymin aesthetics (ymax and ymin are for your CI's)
+  geom_line(aes(x = week, y = proportion), linetype = "dotted") +     # Fill in the x and y aesthetics (the same as above)
+  geom_hline(aes(yintercept = 0.65), color = "darkblue", linetype = "dashed") +
+  theme_bw() +
+  labs(title = "Observed Proportion of Compliant Individuals by Week", x = "Week", y = "Proportion") +
+  scale_x_continuous(breaks = 1:10, labels = paste("Week", 1:10)) +
+  scale_y_continuous(limits = 0:1) +
+  annotate(geom = "text", x = 8, y = 0.9, label = "Target Compliance = 0.6", color = "darkblue")
+
+
+
+```
+
+1. Line 211 graphs points with error bars and extends those errors bars to the upper and lower limits specified in the "ymax" and "ymin" statements, respectively.
+
+2. Line 212 draws a dotted line connecting the dots created by line 211.
+
+3.  Line 213 creates a blue, dashed, horizontal line across the graph at the y-value 0.65.
+
+4. Line 214 creates a white background behind the graph and makes the graph's gridlines grey.
+
+5. Line 215 labels the x-axis and y-axis and also creates a title that is set above the graph.
+
+6. Line 216 specifies there should be labels along the x-axis at each point from x=1 to x=10. In addition, the labels should say "Week" followed by the week number (1-10).
+
+7. Line 217 specifies the minmum value of the y-axis is 0 and the maximjm value of the y-axis is 1.
+
+8. Line 218 embeds text in the graph, positions the center of the text at the coordinate (8, 0.9), and makes the text a dark blue color.
+
+
+# Question 3
+
+*In lecture and lab we have talked about power and how to calculate and visualize it using simulations. In all our work, we cheated a bit and used Standard Normal Distribution that can be used only if the population variance is known (We did this using the `rnorm()` function and `ggplot()`.). Obviously, the variance that we observe is never a population variance but an observed variance. Because of that, all calculations and simulations should be done using t-distribution.  In this excercise , you will compute and simulate power using the t-distribution instead of the z-distribution.*
+
+*We are managers at the Oxford Cereals plant. Boxes are expected to contain an average 368 grams of cereal and it was observed that the variance of the boxes weight was 225 grams. We know that cereal weights are normally distributed but we don't know the population variance of the weights. We always take a sample of 31 cereal boxes to test whether the process (machine) significantly under-fills or over-fills the boxes compared to the label weight.*
+
+*How likely are we to (rightfully) stop the production if the machine fills only 360 g on average?*
+
+### a)
+
+*Simulate 100,000 observations using the null hypothesis distribution using the rt()` function. In order to do this, you will need to include the degrees of freedom for the t-distribution, which can be calculated using the formula $df = n - 1$.*
+
+```{r}
+
+null_hypothesis <- rt(100000, 30)
+
+null_df <- tibble(obs = null_hypothesis, scenario = "Null Hypothesis")
+
+```
+
+### b) 
+
+*Determine the rejection region of a t-distribution for a two-sided hypothesis test at a level of significance of 5%.   Using qt function .... Hint (test what qnorm(.05, 0, 1) and qnorm(.025, 0, 1) gives you). *
+
+```{r}
+
+lower_rej_reg <- -qt(0.975, 30)
+upper_rej_reg <- qt(0.975, 30)
+
+```
+
+The rejection regions are t < `r lower_rej_reg` and t > `r upper_rej_reg`.
+
+### c)
+
+*Create a new categorical variable `rejection_region` based on whether a null hypothesis simulated observation is inside of the rejection region. What proportion of simulated observations using the null hypothesis fall inside the rejection region? Give precise number (upto 5 decimal places). Why is it not exactly .05?*
+
+```{r}
+
+null_df <- null_df %>%
+  mutate(region = if_else(obs < lower_rej_reg | obs > upper_rej_reg, "rejection", "non-rejection"))
+
+summary_null <- null_df %>%
+  group_by(region) %>%
+  summarize(n = n()) %>%
+  mutate(proportion = n/sum(n))
+
+```
+
+The proportion of observations that fell in the rejection region for the null hypothesis was `r summary_null$proportion[2]`. It's not exactly 0.05 because the variance of the distribution isn't exactly one.
+
+### d) 
+
+*Compute the corresponding t-score for a machine that fills boxes with 360 grams of cereals, on average. Note, that t-score and z-score formula don't differ. Report the t-score and corresponding degrees of freedom.*
+
+```{r}
+
+#t = (sample mean - population mean) / (sd / sqrt(n))
+#sd = sqrt(variance)
+
+sample_mean_cereal <- 360
+popn_mean_cereal <- 368
+sd_cereal <- sqrt(225)
+sample_size_cereal <- 31
+df <- sample_size_cereal - 1
+
+
+t <- (sample_mean_cereal - popn_mean_cereal) / (sd_cereal / sqrt(sample_size_cereal))
+
+```
+
+The t-statistic is `r t`, and the degrees of freedom is `r df`.
+
+### e)
+
+*Next, simulated 100,000 observations using the the alternative hypothesis using the `rt()` function. In order to do this, you will need to include the degrees of freedom for the t-distribution, which can be calculated using the formula $df = n - 1$. Additionally, the t-distribution is always centered around 0. To center it around different number, we have to add/subtract the value we want the center (mean) to be. For instance to have the t-distribution centered around +2, we would add +2 to all the simulated observations.*
+
+```{r}
+
+alt_hypothesis <- rt(100000, 30, t)
+alt_df <- tibble(obs = alt_hypothesis, scenario = "Alternative Hypothesis")
+
+```
+
+### f)
+
+*Create a new categorical variable `rejection_region` based on whether a alternative hypothesis simulated observation is inside of the rejection region. What proportion of simulated observations using the alternative hypothesis fall inside the rejection region (this is a definition of power)? Give precise number (upto 5 decimal places). *
+
+```{r}
+
+alt_df <- alt_df %>%
+  mutate(region = if_else(obs < lower_rej_reg | obs > upper_rej_reg, "rejection", "non-rejection"))
+
+alt_null <- alt_df %>%
+  group_by(region) %>%
+  summarize(n = n()) %>%
+  mutate(proportion = n/sum(n))
+
+```
+
+The proportion of observations in the rejection region for the alternative hypothesis is `r alt_null$proportion[2]`.
+
+### f)
+
+*Combine your alternative hypothesis simulated data with null hypothesis data into one dataset using `bind_rows()`. Create a graph that displays the distributions under the null and alternative hypotheses that is just like the graph presented in lecture and lab.*
+
+*Key components your graph must have:*
+*(1) Custom colors for the rejection and non-rejection regions.*
+*(2) The graph must have facets for null hypothesis and alternative hypothesis observations.* 
+*(3) The x-axis, y-axis, and legend must be properly labeled.*
+*(4) Your graph needs to have two vertical dashed lines that mark the boundary between rejection and non-rejection regions. *
+
+### g)
+
+
+*In a sentence, describe how the calculated power using the t-distribution compares to the power we calculated in lecture and lab (use some of the following words "it is smaller", "it is larger", "it is the same"). What do you think about the difference between using the t-distribution and the z-distribution?*
+
+```{r}
+
+combined_df <- bind_rows(alt_df, null_df)
+
+combined_df$scenario <- factor(combined_df$scenario, levels= c("Null Hypothesis", "Alternative Hypothesis"))
+
+combined_df[order(combined_df$scenario), ]
+
+ggplot(data = combined_df) +
+  geom_histogram(aes(x = obs, fill = region), bins = 150) +
+  geom_vline(aes(xintercept = upper_rej_reg), linetype = "dashed") +
+  geom_vline(aes(xintercept = lower_rej_reg), linetype = "dashed") +
+  facet_wrap(~scenario, ncol = 1) +
+  scale_fill_manual(values = c("rejection" = "red", "non-rejection" = "grey")) +
+  theme_bw() +
+  labs(x = "t-statistic", y = "Count", fill = "Region") +
+  theme(strip.background = element_rect(fill = "yellow"),
+        legend.position = "bottom")
+
+```
+
+The calculated power from the t-distribution (`r (alt_null$proportion[2])*100`%) is smaller than the calculated power (84.37%) from the z-distribution. The z-distribution assumes we know the population variance and this allows us to accurately maximize power, given a pre-set level of alpha. Since the t-distriibution implies uncertainty over the true population variance, maximum power (the probability of correctly rejecting the null) is lower, given the same pre-set level of alpha. 
+
+
+# Question 4
+
+*Managers in rival cereal plant "No Fake News Cereals" learned about quality control used by managers at the Oxford Cereals plant and copied their system. "No Fake News Cereals" are expected to weigh on average 777 grams. The machines were observed to fill boxes with standard deviation of 17 grams. We know that cereal weights are normally distributed but we don't know the population variance of the weights. The managers in "No Fake News Cereals" are not worried about overfilling the boxes, they only want to stop the process (machine) if the boxes are underfilled. In order to determine that, they always take a sample of 33 boxes.*
+
+### a)
+
+*How likely are they to stop the production if the machine fills only 770 grams?* 
+
+*Compute and report power and create the relevant graphs. The graph must contain the same key components as your graph in part 4f.*
+
+```{r}
+
+#Replicate 3a
+#n = 33, so df = 32
+null_hyp_newcomp <- rt(100000, 32)
+
+null_df_newcomp <- tibble(obs = null_hypothesis, scenario = "Null Hypothesis")
+
+
+#Replicate 3b
+#One-sided hypothesis, lower tail
+rej_reg_newcomp <- -qt(0.95, 32)
+
+
+#Replicate 3c
+null_df_newcomp <- null_df_newcomp %>%
+  mutate(region = if_else(obs < rej_reg_newcomp, "rejection", "non-rejection"))
+
+summary_null_newcomp <- null_df_newcomp %>%
+  group_by(region) %>%
+  summarize(n = n()) %>%
+  mutate(proportion = n/sum(n))
+
+
+#Replicate 3d
+#t = (sample mean - population mean) / (sd / sqrt(n))
+
+sample_mean_newcomp <- 770
+popn_mean_newcomp <- 777
+sd_cereal_newcomp <- 17
+sample_size_newcomp <- 33
+df_newcomp <- sample_size_newcomp - 1
+
+
+t_newcomp <- (sample_mean_newcomp - popn_mean_newcomp) / (sd_cereal_newcomp / sqrt(sample_size_newcomp))
+
+
+#Replicate 3e
+alt_hyp_newcomp <- rt(100000, 32, t_newcomp)
+alt_df_newcomp <- tibble(obs = alt_hyp_newcomp, scenario = "Alternative Hypothesis")
+
+
+#Replicate 3f
+alt_df_newcomp <- alt_df_newcomp %>%
+  mutate(region = if_else(obs < rej_reg_newcomp, "rejection", "non-rejection"))
+
+alt_null_newcomp <- alt_df_newcomp %>%
+  group_by(region) %>%
+  summarize(n = n()) %>%
+  mutate(proportion = n/sum(n))
+
+
+#Replicate 3g
+combined_df_newcomp <- bind_rows(alt_df_newcomp, null_df_newcomp)
+
+combined_df_newcomp$scenario <- factor(combined_df_newcomp$scenario, levels= c("Null Hypothesis", "Alternative Hypothesis"))
+
+combined_df_newcomp[order(combined_df_newcomp$scenario), ]
+
+ggplot(data = combined_df_newcomp) +
+  geom_histogram(aes(x = obs, fill = region), bins = 150) +
+  geom_vline(aes(xintercept = rej_reg_newcomp), linetype = "dashed") +
+  facet_wrap(~scenario, ncol = 1) +
+  scale_fill_manual(values = c("rejection" = "red", "non-rejection" = "grey")) +
+  theme_bw() +
+  labs(x = "t-statistic", y = "Count", fill = "Region") +
+  theme(strip.background = element_rect(fill = "yellow"),
+        legend.position = "bottom")
+
+
+```
+
+Power would be `r (alt_null_newcomp$proportion[2])*100`%.
+
+
+### b)
+
+*What recommendations do you give to Managers in "No Fake News Cereals" plant in order for them to achieve 80% power.*
+
+I would recommend increasing the sample size of cereal boxes to 38 to achieve 80% power for stopping production if the machine fills only 770 grams. 
